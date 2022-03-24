@@ -4,11 +4,13 @@ from elasticsearch import Elasticsearch
 
 def connect_elasticsearch():
     _es = None
-    _es = Elasticsearch([{'scheme':'http', 'host': 'localhost', 'port': 9200}], )
+    _es = Elasticsearch(
+        [{"scheme": "http", "host": "localhost", "port": 9200}],
+    )
     if _es.ping():
-        print('ElasticSearch Connect')
+        print("ElasticSearch Connect")
     else:
-        print('Not connect!')
+        print("Not connect!")
     return _es.ping()
 
 
