@@ -1,36 +1,54 @@
+import meilisearch
+import uvicorn
+
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
-import meilisearch
+from fastapi.middleware.cors import CORSMiddleware
+
 from src.elastic.check_connection import connect_elasticsearch
 from src.elastic.search import search_word
+from src.elastic.es_make_data import main as es_data
+from src.meili.meili_make_data import main as mei_data
+from src.app_config.settings import get_main_ip
 
+
+BACKEND_IP = get_main_ip()
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/")
 async def main_page():
+    ip = get_main_ip()
+    meili_server = meilisearch.Client(f"http://{ip}:7700", "nilsir")
     status_data = {
         "connection to ElasticSearch": connect_elasticsearch(),
-        "connection to Meili": False,
+        "connection to Meili": meili_server.is_healthy(),
     }
     return JSONResponse(content=status_data)
 
 
 @app.get("/search/elastic/")
 async def read_item(query: str):
-    search_data = search_word(query)
+    search_data = search_word(query, BACKEND_IP)
     return JSONResponse(content=search_data)
 
 
 @app.get("/search/meilis/")
 async def read_item(query: str):
-    client = meilisearch.Client("http://0.0.0.0:7700")
-    print("chek=", client.get_all_stats())
+    ip = get_main_ip()
+    client = meilisearch.Client(f"http://{ip}:7700", "nilsir")
     search_data = client.index("movies").search(query)
     from datetime import datetime
 
-    print("* ", len(search_data["hits"]))
     for i in range(len(search_data["hits"])):
 
         date = int(search_data["hits"][i]["release_date"])
@@ -39,3 +57,25 @@ async def read_item(query: str):
         )
 
     return JSONResponse(content=search_data)
+
+
+def run_server():
+    uvicorn.run(
+        "main:app",
+        host="0.0.0.0",
+        port=8000,
+        reload=True,
+        log_level="debug",
+        debug=True,
+        # workers=1,
+        # limit_concurrency=1,
+        # limit_max_requests=1,
+    )
+
+
+if __name__ == "__main__":
+    es_data(BACKEND_IP)
+    mei_data(BACKEND_IP)
+    run_server()
+
+# TODO cinfiguration class - set back ip for app
