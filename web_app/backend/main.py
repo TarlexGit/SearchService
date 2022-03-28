@@ -2,6 +2,7 @@ import meilisearch
 import uvicorn
 
 from fastapi import FastAPI
+from fastapi import BackgroundTasks
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -14,7 +15,22 @@ from src.app_config.settings import get_main_ip
 
 BACKEND_IP = get_main_ip()
 
-app = FastAPI()
+
+def create_app() -> FastAPI:
+    app = FastAPI(
+        title="Search service",
+        description="Just my experements with serch systems and Fastapi",
+        version="0.1",
+    )
+
+    @app.get("/health")
+    async def health() -> str:
+        return "ok"
+
+    return app
+
+
+app = create_app()
 
 app.add_middleware(
     CORSMiddleware,
@@ -25,7 +41,7 @@ app.add_middleware(
 )
 
 
-@app.get("/")
+@app.get("/statuses")
 async def main_page():
     ip = get_main_ip()
     meili_server = meilisearch.Client(f"http://{ip}:7700", "nilsir")
@@ -59,6 +75,26 @@ async def read_item(query: str):
     return JSONResponse(content=search_data)
 
 
+@app.post("/load-data/{system}")
+async def send_notification(system: str, background_tasks: BackgroundTasks):
+    # TODO refactoring
+    def load_data(system: str):
+        match system:
+            case "elastic":
+                es_data(BACKEND_IP)
+                JSONResponse(content={"status": "Ok", "system": system})
+            case "meili":
+                mei_data(BACKEND_IP)
+                JSONResponse(content={"status": "Ok", "system": system})
+            case "both":
+                mei_data(BACKEND_IP)
+                es_data(BACKEND_IP)
+                JSONResponse(content={"status": "Ok", "system": "elastic & meili"})
+
+    background_tasks.add_task(load_data, system)
+    return {"message": "Notification sent in the background"}
+
+
 def run_server():
     uvicorn.run(
         "main:app",
@@ -74,8 +110,6 @@ def run_server():
 
 
 if __name__ == "__main__":
-    es_data(BACKEND_IP)
-    mei_data(BACKEND_IP)
     run_server()
 
 # TODO cinfiguration class - set back ip for app

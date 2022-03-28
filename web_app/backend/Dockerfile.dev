@@ -1,0 +1,23 @@
+FROM python:3.10.4
+
+# main dir
+WORKDIR /searchservice
+
+# copy paste files
+COPY ./poetry.lock .
+COPY ./pyproject.toml .
+COPY ./src ./src
+COPY ./main.py ./main.py
+
+
+# instal environment
+RUN pip3 install poetry
+# RUN poetry config virtualenvs.create false
+RUN poetry install
+
+
+# run application
+# ENTRYPOINT ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "80"]
+# ENTRYPOINT ["poetry", "run", "python", "main.py"]
+
+# CMD ["poetry", "run", "start_app"]

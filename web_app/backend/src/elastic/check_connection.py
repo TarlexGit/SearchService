@@ -5,15 +5,7 @@ from src.app_config.settings import get_main_ip
 
 def connect_elasticsearch():
     _es = None
-    _es = Elasticsearch(
-        [
-            {
-                "scheme": "http",
-                "host": get_main_ip(),
-                "port": 9200
-            }
-        ]
-    )
+    _es = Elasticsearch([{"scheme": "http", "host": get_main_ip(), "port": 9200}])
     if _es.ping():
         print("ElasticSearch Connect")
     else:
